@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Record {{ index + 1 }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            background-color: #111;
+            color: #fff;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .btn-small {
+            background-color: #444;
+            color: #fff;
+        }
+
+        .btn-next {
+            background-color: #1e90ff;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .coet-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .field {
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle {
+            width: 120px;
+            height: 120px;
+            background-color: #333;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+       position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .toggle.valid {
+            background-color: #007bff;
+        }
+
+        .toggle.invalid {
+            background-color: #001f3f;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                margin: 1rem;
+                font-size: 1rem;
+            }
+
+            .btn-next {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <script>
+        function toggleStillValid(index, isValid) {
+            fetch("/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    index: index,
+                    value: !isValid
+                })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+
+    <div class="field">
+        <button class="toggle {% if row['Still valid'] %}valid{% else %}invalid{% endif %}"
+                onclick="toggleStillValid({{ index }}, {{ row['Still valid'] | lower }})">
+        </button>
+    </div>
+
+    <div class="coet-text">{{ row['Coet'] }}</div>
+
+    <div class="field"><strong>Source:</strong> {{ row['Source'] }}</div>
+    <div class="field"><strong>Date Coet:</strong>
+        {{ row['date coet'].strftime("%d %b %Y") if row['date coet'] else '' }}
+    </div>
+
+<script>
+    // Swipe support (mobile)
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const threshold = 50;
+
+    document.addEventListener("touchstart", function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    });
+
+    document.addEventListener("touchend", function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleGesture();
+    });
+
+    function handleGesture() {
+        if (touchEndX < touchStartX - threshold) {
+            window.location.href = "{{ url_for('next_record', index=index) }}"; // swipe left
+        } else if (touchEndX > touchStartX + threshold) {
+            window.location.href = "{{ url_for('previous_record', index=index) }}"; // swipe right
+        }
+    }
+
+    // Keyboard arrow key support (desktop)
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "ArrowRight") {
+            window.location.href = "{{ url_for('next_record', index=index) }}";
+        } else if (e.key === "ArrowLeft") {
+            window.location.href = "{{ url_for('previous_record', index=index) }}";
+        }
+    });
+</script>
+
+
+</body>
+</html>
