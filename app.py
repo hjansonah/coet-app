@@ -5,13 +5,26 @@ import psycopg2
 app = Flask(__name__)
 CORS(app)
 
-DB_PARAMS = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "bouncym2025",
-    "host": "127.0.0.1",
-    "port": "5432"
-}
+import os
+import psycopg2
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+# Example usage:
+def get_reviewed_ids():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT "ID" FROM "coets_android_appended" WHERE last_reviewed IS NOT NULL ORDER BY last_reviewed')
+    ids = [r[0] for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return ids
+
+# Then in other places, replace psycopg2.connect(**DB_PARAMS) with get_connection()
+
 
 # Fetch all reviewed record IDs
 def get_reviewed_ids():
