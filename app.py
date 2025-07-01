@@ -1,19 +1,16 @@
+import os
+import psycopg2
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_cors import CORS
-import psycopg2
 
 app = Flask(__name__)
 CORS(app)
-
-import os
-import psycopg2
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
-# Example usage:
 def get_reviewed_ids():
     conn = get_connection()
     cur = conn.cursor()
@@ -23,23 +20,9 @@ def get_reviewed_ids():
     conn.close()
     return ids
 
-# Then in other places, replace psycopg2.connect(**DB_PARAMS) with get_connection()
-
-
-# Fetch all reviewed record IDs
-def get_reviewed_ids():
-    conn = psycopg2.connect(**DB_PARAMS)
-    cur = conn.cursor()
-    cur.execute('SELECT "ID" FROM "coets_android_appended" WHERE last_reviewed IS NOT NULL ORDER BY last_reviewed')
-    ids = [r[0] for r in cur.fetchall()]
-    cur.close()
-    conn.close()
-    return ids
-
 @app.route("/")
 def index():
-    # Redirect to the next unreviewed record
-    conn = psycopg2.connect(**DB_PARAMS)
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute('SELECT "ID" FROM "coets_android_appended" WHERE last_reviewed IS NULL ORDER BY "ID" LIMIT 1')
     row = cur.fetchone()
@@ -59,7 +42,7 @@ def record(index):
 
     record_id = reviewed_ids[index]
 
-    conn = psycopg2.connect(**DB_PARAMS)
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute('SELECT * FROM "coets_android_appended" WHERE "ID" = %s', (record_id,))
     row = cur.fetchone()
@@ -81,7 +64,7 @@ def update():
 
     record_id = reviewed_ids[index]
 
-    conn = psycopg2.connect(**DB_PARAMS)
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute('UPDATE "coets_android_appended" SET "Still valid" = %s WHERE "ID" = %s', (value, record_id))
     conn.commit()
@@ -92,8 +75,7 @@ def update():
 
 @app.route("/next/<int:index>")
 def next_record(index):
-    # Get next unreviewed record
-    conn = psycopg2.connect(**DB_PARAMS)
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute('SELECT "ID" FROM "coets_android_appended" WHERE last_reviewed IS NULL ORDER BY "ID" LIMIT 1')
     next_unreviewed = cur.fetchone()
@@ -105,11 +87,9 @@ def next_record(index):
 
     next_id = next_unreviewed[0]
 
-    # Mark it reviewed
     cur.execute('UPDATE "coets_android_appended" SET last_reviewed = CURRENT_TIMESTAMP WHERE "ID" = %s', (next_id,))
     conn.commit()
 
-    # Recalculate reviewed list and find index
     cur.execute('SELECT "ID" FROM "coets_android_appended" WHERE last_reviewed IS NOT NULL ORDER BY last_reviewed')
     reviewed_ids = [r[0] for r in cur.fetchall()]
     next_index = reviewed_ids.index(next_id)
@@ -127,6 +107,4 @@ def previous_record(index):
     return redirect(url_for('record', index=index - 1))
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
-
-
+    app.run(host="0.0.0.0", port=8080)
